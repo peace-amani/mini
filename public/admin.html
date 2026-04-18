@@ -544,6 +544,27 @@
         <div class="feedback" id="dynoFeedback"></div>
       </div>
 
+
+      <!-- DEPLOY TO HEROKU -->
+      <div class="card" style="margin-top:0">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Deploy</div>
+            <div class="card-title-main">Push to Production</div>
+          </div>
+          <button class="neon-btn" id="btnDeploy" onclick="triggerDeploy()">🚀 Deploy to Heroku</button>
+        </div>
+        <div style="font-size:0.75rem;color:rgba(0,255,0,0.4);line-height:1.8;margin-bottom:12px;">
+          Deploys the latest code from <code style="color:rgba(0,255,0,0.7)">peace-amani/wolfy</code> main branch.<br/>
+          Make &amp; test changes on Replit → auto-pushed to GitHub → click here to go live.
+        </div>
+        <div class="feedback" id="deployFeedback"></div>
+        <div id="deployProgress" style="display:none;margin-top:8px;">
+          <div style="font-size:0.72rem;color:rgba(0,255,0,0.5);margin-bottom:6px;">BUILD PROGRESS</div>
+          <div id="deployStatus" style="font-family:'Orbitron',monospace;font-size:0.8rem;color:#00ff00;"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
