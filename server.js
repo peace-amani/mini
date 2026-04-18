@@ -143,15 +143,31 @@ app.post('/api/admin/heroku-api-key', requireAdmin, async (req, res) => {
 });
 
 // ── HEROKU DYNO STATUS ──
+// Heroku URLs have a dyno-ID suffix (e.g. wolfy-mini-44d170622f02.herokuapp.com)
+// but the Heroku API app name is just "wolfy-mini". Resolve via apps list.
+async function resolveHerokuAppName(apiKey, botUrl) {
+  try {
+    const r = await fetch('https://api.heroku.com/apps', {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/vnd.heroku+json; version=3' },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!r.ok) return null;
+    const apps = await r.json();
+    const norm = u => u.replace(/\/+$/, '').toLowerCase();
+    const t = norm(botUrl);
+    const found = apps.find(a => norm(a.web_url).startsWith(t) || t.startsWith(norm(a.web_url)));
+    return found ? found.name : null;
+  } catch { return null; }
+}
+
 app.get('/api/admin/heroku-dyno-status', requireAdmin, async (req, res) => {
   const cfg = loadConfig();
   const apiKey = cfg.herokuApiKey;
   const url = BOT_URL;
   if (!apiKey) return res.json({ success: false, error: 'Heroku API key not configured — add it in the Heroku tab' });
   if (!url) return res.json({ success: false, error: 'Heroku bot URL not configured' });
-  const match = url.match(/https?:\/\/([^.]+)\.herokuapp\.com/);
-  if (!match) return res.json({ success: false, error: 'Could not extract app name from URL' });
-  const appName = match[1];
+  const appName = await resolveHerokuAppName(apiKey, url);
+  if (!appName) return res.json({ success: false, error: 'Could not resolve Heroku app name — check API key and URL' });
   try {
     const r = await fetch(`https://api.heroku.com/apps/${appName}/dynos`, {
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/vnd.heroku+json; version=3' },
@@ -175,9 +191,8 @@ app.post('/api/admin/heroku-restart-dyno', requireAdmin, async (req, res) => {
   const url = BOT_URL;
   if (!apiKey) return res.json({ success: false, error: 'Heroku API key not configured' });
   if (!url) return res.json({ success: false, error: 'Heroku bot URL not configured' });
-  const match = url.match(/https?:\/\/([^.]+)\.herokuapp\.com/);
-  if (!match) return res.json({ success: false, error: 'Could not extract app name from URL' });
-  const appName = match[1];
+  const appName = await resolveHerokuAppName(apiKey, url);
+  if (!appName) return res.json({ success: false, error: 'Could not resolve Heroku app name — check API key and URL' });
   try {
     const r = await fetch(`https://api.heroku.com/apps/${appName}/dynos`, {
       method: 'DELETE',
