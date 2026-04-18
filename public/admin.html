@@ -387,6 +387,7 @@
         <div class="stat-card"><div class="stat-label">Running</div><div class="stat-value green" id="statActive">—</div></div>
         <div class="stat-card"><div class="stat-label">Failed</div><div class="stat-value red" id="statInactive">—</div></div>
         <div class="stat-card"><div class="stat-label">Pairing</div><div class="stat-value yellow" id="statPairing">—</div></div>
+        <div class="stat-card"><div class="stat-label">Live Processes</div><div class="stat-value green" id="statLive">—</div><div class="stat-sub">bot processes</div></div>
         <div class="stat-card">
           <div class="stat-label">Uptime</div>
           <div class="stat-value blue" id="statUptime">—</div>
@@ -429,6 +430,10 @@
   <!-- USERS -->
   <div id="pane-users" class="tab-pane">
     <div class="content">
+      <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
+        <input type="text" id="searchInput" class="neon-input" placeholder="Search by phone number..." oninput="filterSessions()" style="flex:1;"/>
+        <button class="btn-sm btn-green" onclick="document.getElementById('searchInput').value='';filterSessions()">Clear</button>
+      </div>
       <div class="tab-bar">
         <button class="tab active" id="tabAll" onclick="switchTab('all')">All</button>
         <button class="tab" id="tabRunning" onclick="switchTab('running')">Running</button>
@@ -821,6 +826,7 @@ async function loadStats() {
     document.getElementById('statActive').textContent = s?.active ?? '—';
     document.getElementById('statInactive').textContent = s?.inactive ?? '—';
     document.getElementById('statPairing').textContent = s?.pairing ?? '—';
+    if(document.getElementById('statLive')) document.getElementById('statLive').textContent = s?.liveProcesses ?? s?.inMemory ?? '—';
     document.getElementById('statUptime').textContent = fmtUptime(data.uptime);
     const dot = document.getElementById('dbDot');
     if (data.db?.connected) { dot.classList.add('on'); document.getElementById('dbStatus').textContent = 'MongoDB connected'; }
@@ -914,13 +920,42 @@ function updateSuggestBanner() {
   }
 }
 
+
+function filterSessions() {
+  const raw = document.getElementById('searchInput').value || '';
+  const q = raw.replace(/\D/g, '');
+  if (!q) { renderTable(); return; }
+  let rows = allSessions;
+  if (currentTab === 'running') rows = rows.filter(s => classify(s) === 'running');
+  else if (currentTab === 'failed') rows = rows.filter(s => classify(s) === 'failed');
+  else if (currentTab === 'critical') rows = rows.filter(s => classify(s) === 'critical');
+  else if (currentTab === 'pairing') rows = rows.filter(s => classify(s) === 'pairing');
+  rows = rows.filter(s => s.phone.includes(q));
+  const body = document.getElementById('sessionsBody');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="6" class="empty-row">No sessions matching ' + q + '</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(s => {
+    const cls = classify(s);
+    const suggest = getSuggestion(s);
+    const suggestHtml = suggest
+      ? suggest.type === 'restart'
+        ? '<button class="suggest restart" onclick="restartBot('' + s.phone + '')">↺ Restart bot</button>'
+        : '<button class="suggest delete" onclick="deleteSession('' + s.phone + '')">Delete</button>'
+      : '<span style="color:var(--gray-500);font-size:0.7rem">—</span>';
+    return '<tr><td><code style="font-size:0.8rem">' + s.phone + '</code></td><td><span class="badge ' + cls + '"><span class="badge-dot"></span>' + cls.charAt(0).toUpperCase()+cls.slice(1) + '</span></td><td>' + suggestHtml + '</td><td>' + fmtDate(s.connectedAt) + '</td><td>' + fmtDate(s.lastSeen) + '</td><td><div class="action-col"><button class="restart-btn" onclick="restartBot('' + s.phone + '')">↺</button><button class="del-btn" onclick="deleteSession('' + s.phone + '')">Delete</button></div></td></tr>';
+  }).join('');
+}
+
 function switchTab(tab) {
   currentTab = tab;
   ['All','Running','Failed','Critical','Pairing'].forEach(t => {
     const el = document.getElementById('tab' + t);
     if (el) el.classList.toggle('active', t.toLowerCase() === tab);
   });
-  renderTable();
+  const sq = document.getElementById('searchInput')?.value?.replace(/\D/g,'') || '';
+  if (sq) filterSessions(); else renderTable();
 }
 
 async function restartBot(phone) {
