@@ -343,6 +343,30 @@
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .nav-tab { padding: 10px 12px; font-size: 0.72rem; }
     }
+  
+  /* ── NEON TOAST ── */
+  #toast-container { position:fixed; top:20px; right:20px; z-index:99999; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+  .toast { display:flex; align-items:center; gap:10px; padding:12px 18px; border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:0.82rem; min-width:260px; max-width:380px; pointer-events:all; backdrop-filter:blur(8px); border:1px solid; animation:toastIn .25s ease; }
+  @keyframes toastIn { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes toastOut { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(40px)} }
+  .toast.success { background:rgba(0,20,0,0.95); border-color:#00ff00; color:#00ff00; box-shadow:0 0 18px rgba(0,255,0,0.25); }
+  .toast.error   { background:rgba(20,0,0,0.95);  border-color:#ff3333; color:#ff5555; box-shadow:0 0 18px rgba(255,50,50,0.25); }
+  .toast.info    { background:rgba(0,10,20,0.95);  border-color:#00aaff; color:#44ccff; box-shadow:0 0 18px rgba(0,170,255,0.2); }
+  .toast .toast-close { margin-left:auto; cursor:pointer; opacity:0.6; font-size:1rem; line-height:1; flex-shrink:0; }
+  .toast .toast-close:hover { opacity:1; }
+  /* ── NEON CONFIRM MODAL ── */
+  #neon-confirm-overlay { position:fixed; inset:0; z-index:99998; background:rgba(0,0,0,0.75); display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+  #neon-confirm-overlay.active { display:flex; }
+  #neon-confirm-box { background:#0a0a0a; border:1px solid rgba(0,255,0,0.35); border-radius:12px; padding:32px 28px 24px; min-width:320px; max-width:420px; box-shadow:0 0 40px rgba(0,255,0,0.15); text-align:center; font-family:'JetBrains Mono',monospace; }
+  #neon-confirm-box .confirm-icon { font-size:2rem; margin-bottom:12px; }
+  #neon-confirm-box .confirm-msg  { color:#ccc; font-size:0.88rem; line-height:1.6; margin-bottom:24px; white-space:pre-wrap; }
+  #neon-confirm-box .confirm-btns { display:flex; gap:12px; justify-content:center; }
+  #neon-confirm-box .confirm-btns button { flex:1; padding:10px 0; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:1px; cursor:pointer; border:none; transition:all .2s; }
+  #neon-confirm-box .btn-yes { background:#00ff00; color:#000; }
+  #neon-confirm-box .btn-yes:hover { background:#33ff33; box-shadow:0 0 14px rgba(0,255,0,0.5); }
+  #neon-confirm-box .btn-no  { background:#1a1a1a; color:#aaa; border:1px solid #333; }
+  #neon-confirm-box .btn-no:hover  { background:#222; color:#fff; }
+
   </style>
 </head>
 <body>
@@ -740,7 +764,7 @@ async function loadDynoStatus() {
 }
 
 async function restartDyno() {
-  if (!confirm('Restart the Heroku dyno? Bot will be offline for ~30 seconds.')) return;
+  if (!await neonConfirm('Restart the Heroku dyno?\nBot will be offline for ~30 seconds.')) return;
   const btn = document.getElementById('btnRestartDyno');
   const fb = document.getElementById('dynoFeedback');
   btn.disabled = true; btn.textContent = 'Restarting...'; fb.className = 'feedback';
@@ -777,7 +801,7 @@ async function loadVersionInfo() {
 }
 
 async function restartAll() {
-  if (!confirm('Restart all running bots?')) return;
+  if (!await neonConfirm('Restart all running bots?')) return;
   setActionBtns(true);
   try {
     const res = await fetch('/api/admin/restart-all', { method: 'POST' });
@@ -788,7 +812,7 @@ async function restartAll() {
 }
 
 async function updateAll() {
-  if (!confirm('Update all bots to latest code?')) return;
+  if (!await neonConfirm('Update all bots to latest code?')) return;
   setActionBtns(true);
   try {
     const res = await fetch('/api/admin/update-all', { method: 'POST' });
@@ -959,23 +983,28 @@ function switchTab(tab) {
 }
 
 async function restartBot(phone) {
-  if (!confirm(`Restart bot for ${phone}?`)) return;
+  if (!await neonConfirm(`Restart bot for ${phone}?`)) return;
   try {
     const res = await fetch(`/api/admin/restart-bot/${phone}`, { method: 'POST' });
     const data = await res.json();
-    if (data.success) { alert(`✅ Bot restarting for ${phone}`); setTimeout(loadAll, 5000); }
-    else alert('❌ ' + (data.error || 'Failed'));
-  } catch { alert('Network error'); }
+    if (data.success) { showToast(`Bot restarting for ${phone}`, 'success'); setTimeout(loadAll, 5000); }
+    else showToast((data.error || 'Failed'), 'error');
+  } catch { showToast('Network error', 'error'); }
 }
 
 async function deleteSession(phone) {
-  if (!confirm(`Delete session for ${phone}? This cannot be undone.`)) return;
+  if (!await neonConfirm(`Delete session for ${phone}?\nThis cannot be undone.`)) return;
   try {
     const res = await fetch(`/api/admin/session/${phone}`, { method: 'DELETE' });
     const data = await res.json();
-    if (data.success) { allSessions = allSessions.filter(s => s.phone !== phone); renderTable(); loadStats(); }
-    else alert('❌ ' + data.error);
-  } catch { alert('Network error'); }
+    if (data.success) {
+      allSessions = allSessions.filter(s => s.phone !== phone);
+      renderTable(); loadStats();
+      showToast(`Session ${phone} deleted`, 'success');
+    } else {
+      showToast(data.error || 'Delete failed', 'error');
+    }
+  } catch { showToast('Network error', 'error'); }
 }
 
 // ── MAINTENANCE ──
@@ -1027,6 +1056,48 @@ function fmtUptime(secs) {
 }
 
 fetch('/auth/check').then(r => r.json()).then(d => { if (d.success) showDashboard(); }).catch(() => {});
+
+// ── NEON UI HELPERS ──
+function showToast(msg, type = 'success', duration = 3500) {
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<span style="flex:1">' + msg + '</span><span class="toast-close" onclick="this.parentElement.remove()">✕</span>';
+  container.appendChild(t);
+  setTimeout(() => { t.style.animation = 'toastOut .3s ease forwards'; setTimeout(() => t.remove(), 300); }, duration);
+}
+
+function neonConfirm(msg) {
+  return new Promise(resolve => {
+    document.getElementById('confirm-msg-text').textContent = msg;
+    const overlay = document.getElementById('neon-confirm-overlay');
+    overlay.classList.add('active');
+    const yes = document.getElementById('confirm-btn-yes');
+    const no  = document.getElementById('confirm-btn-no');
+    function cleanup(val) {
+      overlay.classList.remove('active');
+      yes.replaceWith(yes.cloneNode(true));
+      no.replaceWith(no.cloneNode(true));
+      resolve(val);
+    }
+    document.getElementById('confirm-btn-yes').onclick = () => cleanup(true);
+    document.getElementById('confirm-btn-no').onclick  = () => cleanup(false);
+  });
+}
+
 </script>
+
+<div id="toast-container"></div>
+<div id="neon-confirm-overlay">
+  <div id="neon-confirm-box">
+    <div class="confirm-icon">⚡</div>
+    <div class="confirm-msg" id="confirm-msg-text"></div>
+    <div class="confirm-btns">
+      <button class="btn-yes" id="confirm-btn-yes">CONFIRM</button>
+      <button class="btn-no"  id="confirm-btn-no">CANCEL</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
