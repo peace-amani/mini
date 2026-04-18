@@ -210,6 +210,44 @@ app.post('/api/admin/heroku-restart-dyno', requireAdmin, async (req, res) => {
   }
 });
 
+
+// ── HEROKU DEPLOY (trigger build from GitHub main) ──
+app.post('/api/admin/heroku-deploy', requireAdmin, async (req, res) => {
+  const cfg = loadConfig();
+  const apiKey = cfg.herokuApiKey;
+  if (!apiKey) return res.json({ success: false, error: 'Heroku API key not configured' });
+  if (!BOT_URL) return res.json({ success: false, error: 'Heroku bot URL not configured' });
+  try {
+    const appName = await resolveHerokuAppName(apiKey, BOT_URL);
+    if (!appName) return res.json({ success: false, error: 'Could not resolve Heroku app name' });
+    const r = await fetch(`https://api.heroku.com/apps/${appName}/builds`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/vnd.heroku+json; version=3', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source_blob: { url: 'https://github.com/peace-amani/wolfy/archive/refs/heads/main.tar.gz', version: 'main' } }),
+      signal: AbortSignal.timeout(15000)
+    });
+    const data = await r.json();
+    if (data.id) return res.json({ success: true, buildId: data.id, status: data.status });
+    return res.json({ success: false, error: data.message || `HTTP ${r.status}` });
+  } catch (err) { return res.json({ success: false, error: err.message }); }
+});
+
+app.get('/api/admin/heroku-deploy-status/:buildId', requireAdmin, async (req, res) => {
+  const cfg = loadConfig();
+  const apiKey = cfg.herokuApiKey;
+  if (!apiKey) return res.json({ success: false });
+  try {
+    const appName = await resolveHerokuAppName(apiKey, BOT_URL);
+    if (!appName) return res.json({ success: false });
+    const r = await fetch(`https://api.heroku.com/apps/${appName}/builds/${req.params.buildId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/vnd.heroku+json; version=3' },
+      signal: AbortSignal.timeout(8000)
+    });
+    const data = await r.json();
+    return res.json({ success: true, status: data.status, updatedAt: data.updated_at });
+  } catch (err) { return res.json({ success: false, error: err.message }); }
+});
+
 // ── PAIRING PROXY ──
 app.post('/api/pair', requireBot, async (req, res) => {
   try {
