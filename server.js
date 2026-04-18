@@ -59,6 +59,24 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+
+// ── DIRECT MONGO DELETE (fallback when bot server is unreachable) ──
+async function deleteSessionFromMongo(phone) {
+  const { MongoClient } = await import('mongodb');
+  const cfg = loadConfig();
+  const uri = cfg.mongoUri;
+  if (!uri) throw new Error('mongoUri not in config');
+  const client = new MongoClient(uri, { serverSelectionTimeoutMS: 6000 });
+  try {
+    await client.connect();
+    const db = client.db();
+    const col = db.collection('sessions');
+    const r = await col.deleteOne({ phone });
+    console.log(`[VPS] Direct MongoDB delete for ${phone}: deletedCount=${r.deletedCount}`);
+    return r.deletedCount > 0;
+  } finally { await client.close(); }
+}
+
 // ── AUTH ──
 app.post('/auth/login', (req, res) => {
   const { password } = req.body;
@@ -305,11 +323,31 @@ app.get('/api/admin/sessions', requireBot, requireAdmin, async (req, res) => {
     res.json(await r.json());
   } catch { res.status(502).json({ success: false, error: 'Bot server unreachable' }); }
 });
-app.delete('/api/admin/session/:phone', requireBot, requireAdmin, async (req, res) => {
+app.delete('/api/admin/session/:phone', requireAdmin, async (req, res) => {
+  const phone = req.params.phone;
+  // Try Heroku first (stops the running bot + deletes from DB)
+  if (BOT_URL) {
+    try {
+      const r = await fetch(`${BOT_URL}/admin/session/${phone}`, {
+        method: 'DELETE', headers: { 'x-admin-key': ADMIN_KEY },
+        signal: AbortSignal.timeout(8000)
+      });
+      const data = await r.json();
+      if (data.success) return res.json(data);
+      // Heroku returned an error — fall through to direct Mongo delete
+    } catch (e) {
+      console.warn(`[VPS] Heroku delete failed (${e.message}) — falling back to direct MongoDB delete for ${phone}`);
+    }
+  }
+  // Fallback: delete directly from MongoDB (works even when Heroku is down)
   try {
-    const r = await fetch(`${BOT_URL}/admin/session/${req.params.phone}`, { method: 'DELETE', headers: { 'x-admin-key': ADMIN_KEY } });
-    res.json(await r.json());
-  } catch { res.status(502).json({ success: false, error: 'Bot server unreachable' }); }
+    const deleted = await deleteSessionFromMongo(phone);
+    return res.json({ success: true, message: deleted
+      ? `Session for ${phone} removed from database. Bot will stop on next restart.`
+      : `No session found for ${phone} in database.` });
+  } catch (dbErr) {
+    return res.status(502).json({ success: false, error: `Bot unreachable and DB fallback failed: ${dbErr.message}` });
+  }
 });
 app.post('/api/admin/restart-bot/:phone', requireBot, requireAdmin, async (req, res) => {
   try {
