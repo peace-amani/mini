@@ -208,6 +208,13 @@ app.post('/api/session', requireBot, async (req, res) => {
     res.json(await r.json());
   } catch { res.status(502).json({ success: false, error: 'Could not reach bot server' }); }
 });
+app.post('/api/pair-reset', requireBot, async (req, res) => {
+  try {
+    const r = await fetch(`${BOT_URL}/pair-reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req.body) });
+    res.json(await r.json());
+  } catch { res.status(502).json({ success: false, error: 'Could not reach bot server' }); }
+});
+
 app.get('/api/status', requireBot, async (req, res) => {
   try {
     const r = await fetch(`${BOT_URL}/status`);
