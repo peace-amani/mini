@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WOLFY Bot — Connect</title>
+  <style>
+    :root {
+      --green: #00e676;
+      --green-dim: #00c853;
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --border: #1e1e1e;
+      --text: #e0e0e0;
+      --muted: #666;
+      --red: #ff5252;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      padding: 30px 0 20px;
+    }
+    .logo {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: 4px;
+    }
+    .tagline {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 18px;
+      margin: 10px 0 24px;
+      font-size: 0.85rem;
+      min-width: 300px;
+      justify-content: center;
+    }
+    .indicator {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    .indicator.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .indicator.yellow { background: #ffd740; box-shadow: 0 0 6px #ffd740; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+    .wrap { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; color: var(--green); }
+    .card .desc { font-size: 0.82rem; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+    input[type=text], input[type=tel], textarea {
+      width: 100%;
+      background: #0d0d0d;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus { border-color: var(--green); }
+    textarea { resize: vertical; min-height: 80px; font-family: monospace; font-size: 0.82rem; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 12px;
+      letter-spacing: 0.5px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-green { background: var(--green); color: #000; }
+    .btn-green:hover:not(:disabled) { background: var(--green-dim); }
+    .btn-dim { background: #1a1a1a; color: var(--muted); border: 1px solid #2a2a2a; }
+    .btn-dim:hover:not(:disabled) { color: var(--text); border-color: #444; }
+    .code-box {
+      background: #0d0d0d;
+      border: 1px solid var(--green);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin: 14px 0;
+      display: none;
+    }
+    .code-box .label { font-size: 0.75rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .code-display {
+      font-family: 'Courier New', monospace;
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: 8px;
+    }
+    .msg {
+      font-size: 0.8rem;
+      padding: 9px 12px;
+      border-radius: 6px;
+      margin-top: 10px;
+      display: none;
+      line-height: 1.5;
+    }
+    .msg.info { background: #0d1a2a; border: 1px solid #1e4a7a; color: #64b5f6; }
+    .msg.success { background: #0d1a0d; border: 1px solid #1e6e1e; color: var(--green); }
+    .msg.error { background: #1a0d0d; border: 1px solid #6e1e1e; color: var(--red); }
+    .divider { text-align: center; color: var(--muted); font-size: 0.8rem; margin: 4px 0; }
+    .steps { font-size: 0.8rem; color: var(--muted); line-height: 1.8; margin-top: 12px; }
+    .steps b { color: var(--text); }
+    .footer { margin-top: 30px; font-size: 0.75rem; color: var(--muted); text-align: center; padding-bottom: 20px; }
+    .admin-link { margin-top: 8px; }
+    .admin-link a { color: var(--muted); font-size: 0.75rem; text-decoration: none; }
+    .admin-link a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🐺 WOLFY</div>
+  <div class="tagline">WhatsApp Bot — Connect Your Number</div>
+</div>
+
+<div class="status-bar">
+  <div class="indicator" id="indicator"></div>
+  <span id="statusText">Checking bot status...</span>
+</div>
+
+<div class="wrap">
+
+  <!-- PAIR WITH CODE -->
+  <div class="card">
+    <h2>📱 Link WhatsApp</h2>
+    <p class="desc">Enter your phone number with country code to get a pairing code.</p>
+    <input type="tel" id="phoneInput" placeholder="e.g. 254712345678" maxlength="15"/>
+    <button class="btn btn-green" id="pairBtn" onclick="requestPairCode()">Get Pairing Code</button>
+    <div class="code-box" id="codeBox">
+      <div class="label">Enter this code in WhatsApp</div>
+      <div class="code-display" id="pairCode">----</div>
+    </div>
+    <div class="msg" id="pairMsg"></div>
+    <div class="steps">
+      <b>How to link:</b><br/>
+      1. Enter your number above and click "Get Pairing Code"<br/>
+      2. Open <b>WhatsApp</b> → Settings → Linked Devices<br/>
+      3. Tap <b>"Link a Device"</b> and enter the code shown
+    </div>
+  </div>
+
+  <div class="divider">— OR USE SESSION ID —</div>
+
+  <!-- SESSION ID -->
+  <div class="card">
+    <h2>🔐 Use Session ID</h2>
+    <p class="desc">Paste a session ID from a previous connection.</p>
+    <textarea id="sessionInput" placeholder="WOLF-BOT:eyJ... or base64 session data"></textarea>
+    <button class="btn btn-green" id="sessionBtn" onclick="submitSession()">Connect with Session ID</button>
+    <div class="msg" id="sessionMsg"></div>
+  </div>
+
+</div>
+
+<div class="footer">
+  WOLFY v1.0.0 &nbsp;·&nbsp; Silent Wolf Bot
+  <div class="admin-link"><a href="/admin">Admin Panel →</a></div>
+</div>
+
+<script>
+const evtSource = new EventSource('/api/events');
+
+evtSource.onmessage = e => {
+  const data = JSON.parse(e.data);
+  handleEvent(data);
+};
+evtSource.onerror = () => setStatus('disconnected', 'Bot offline or unreachable');
+
+function handleEvent(data) {
+  switch (data.event) {
+    case 'connected': updateStatus(data.botStatus); break;
+    case 'pairing_started':
+      showMsg('pairMsg', 'info', 'Connecting to WhatsApp...');
+      document.getElementById('pairBtn').disabled = true;
+      break;
+    case 'pairing_code':
+      document.getElementById('pairCode').textContent = data.code;
+      document.getElementById('codeBox').style.display = 'block';
+      showMsg('pairMsg', 'info', 'Code ready — enter it in WhatsApp Linked Devices.');
+      break;
+    case 'connected_success':
+      showMsg('pairMsg', 'success', '✅ ' + data.message);
+      document.getElementById('codeBox').style.display = 'none';
+      document.getElementById('pairBtn').disabled = false;
+      setStatus('connected', 'Bot connected & running');
+      break;
+    case 'session_saved':
+      showMsg('sessionMsg', 'success', '✅ ' + data.message);
+      setStatus('connecting', 'Launching bot...');
+      break;
+    case 'reconnecting':
+      showMsg('pairMsg', 'info', '🔄 ' + data.message);
+      setStatus('connecting', 'Finalising...');
+      break;
+    case 'connection_closed':
+      showMsg('pairMsg', 'error', '⚠️ ' + data.message);
+      document.getElementById('pairBtn').disabled = false;
+      updateStatus('idle');
+      break;
+    case 'bot_exited':
+      setStatus('disconnected', 'Bot stopped');
+      break;
+    case 'error':
+      showMsg('pairMsg', 'error', '❌ ' + data.message);
+      document.getElementById('pairBtn').disabled = false;
+      break;
+  }
+}
+
+function updateStatus(s) {
+  if (s === 'connected') setStatus('connected', 'Bot is connected & running');
+  else if (s === 'pairing') setStatus('connecting', 'Pairing in progress...');
+  else setStatus('idle', 'No active session');
+}
+
+function setStatus(type, text) {
+  const ind = document.getElementById('indicator');
+  ind.className = 'indicator';
+  if (type === 'connected') ind.classList.add('green');
+  else if (type === 'connecting') ind.classList.add('yellow');
+  document.getElementById('statusText').textContent = text;
+}
+
+function showMsg(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'msg ' + type;
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+
+async function requestPairCode() {
+  const phone = document.getElementById('phoneInput').value.replace(/\D/g, '');
+  if (!phone || phone.length < 7) {
+    showMsg('pairMsg', 'error', 'Please enter a valid phone number with country code.');
+    return;
+  }
+  document.getElementById('pairBtn').disabled = true;
+  document.getElementById('codeBox').style.display = 'none';
+  showMsg('pairMsg', 'info', 'Sending request...');
+  try {
+    const res = await fetch('/api/pair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      showMsg('pairMsg', 'error', '❌ ' + data.error);
+      document.getElementById('pairBtn').disabled = false;
+    }
+  } catch {
+    showMsg('pairMsg', 'error', '❌ Network error. Try again.');
+    document.getElementById('pairBtn').disabled = false;
+  }
+}
+
+async function submitSession() {
+  const sessionId = document.getElementById('sessionInput').value.trim();
+  if (!sessionId) {
+    showMsg('sessionMsg', 'error', 'Please paste your session ID.');
+    return;
+  }
+  document.getElementById('sessionBtn').disabled = true;
+  showMsg('sessionMsg', 'info', 'Validating...');
+  try {
+    const res = await fetch('/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId })
+    });
+    const data = await res.json();
+    if (data.success) showMsg('sessionMsg', 'success', '✅ ' + data.message);
+    else {
+      showMsg('sessionMsg', 'error', '❌ ' + data.error);
+      document.getElementById('sessionBtn').disabled = false;
+    }
+  } catch {
+    showMsg('sessionMsg', 'error', '❌ Network error. Try again.');
+    document.getElementById('sessionBtn').disabled = false;
+  }
+}
+
+document.getElementById('phoneInput').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '');
+});
+
+fetch('/api/status').then(r => r.json()).then(data => {
+  updateStatus(data.botStatus || 'idle');
+}).catch(() => setStatus('disconnected', 'Bot unreachable'));
+</script>
+</body>
+</html>
