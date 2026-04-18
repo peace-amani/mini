@@ -232,6 +232,10 @@
       <div class="code-display" id="pairCode">----</div>
     </div>
     <div class="msg" id="pairMsg"></div>
+    <div id="clearBox" style="display:none;margin-top:10px;padding:14px;background:rgba(255,68,68,0.06);border:1px solid rgba(255,68,68,0.2);border-radius:8px;">
+      <div style="font-size:0.78rem;color:#ff4444;margin-bottom:10px;">⚠ WhatsApp rejected the old session. Clear it and pair fresh.</div>
+      <button id="clearBtn" onclick="clearAndRetry()" style="width:100%;padding:10px;border-radius:8px;border:none;background:rgba(255,68,68,0.15);color:#ff4444;font-weight:700;font-size:0.82rem;cursor:pointer;border:1px solid rgba(255,68,68,0.3);font-family:JetBrains Mono,monospace;">🗑 Clear Old Session & Retry</button>
+    </div>
     <div class="steps">
       <b>How to link:</b><br/>
       1. Enter your number → click Get Pairing Code<br/>
@@ -292,10 +296,16 @@ function handleEvent(data) {
     case 'reconnecting':
       showMsg('pairMsg', 'info', '🔄 ' + data.message);
       setStatus('yellow', 'Finalising...'); break;
-    case 'connection_closed':
-      showMsg('pairMsg', 'error', '⚠️ ' + data.message);
+    case 'session_rejected':
+      document.getElementById('pairCode_display_none_hack') && (document.getElementById('codeBox').style.display='none');
+      document.getElementById('codeBox').style.display='none';
       document.getElementById('pairBtn').disabled = false;
-      updateStatus('idle'); break;
+      showRejected(data.message); break;
+    case 'connection_closed':
+      document.getElementById('codeBox').style.display='none';
+      document.getElementById('pairBtn').disabled = false;
+      updateStatus('idle');
+      showMsg('pairMsg', 'error', '⚠️ ' + data.message); break;
     case 'bot_exited': setStatus('off', 'Bot stopped'); break;
     case 'error':
       showMsg('pairMsg', 'error', '❌ ' + data.message);
@@ -345,6 +355,29 @@ async function submitSession() {
     if (data.success) showMsg('sessionMsg', 'success', '✅ ' + data.message);
     else { showMsg('sessionMsg', 'error', '❌ ' + data.error); document.getElementById('sessionBtn').disabled = false; }
   } catch { showMsg('sessionMsg', 'error', '❌ Network error. Try again.'); document.getElementById('sessionBtn').disabled = false; }
+}
+
+async function clearAndRetry() {
+  const phone = document.getElementById('phoneInput').value.replace(/\D/g, '');
+  if (!phone) { showMsg('pairMsg', 'error', 'Enter your number first.'); return; }
+  const btn = document.getElementById('clearBtn');
+  btn.disabled = true; btn.textContent = 'Clearing...';
+  try {
+    const res = await fetch('/api/pair-reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('clearBox').style.display = 'none';
+      showMsg('pairMsg', 'success', '✅ Old session cleared — enter your number and get a new code.');
+    } else {
+      showMsg('pairMsg', 'error', '❌ ' + (data.error || 'Failed to clear session'));
+    }
+  } catch { showMsg('pairMsg', 'error', '❌ Network error'); }
+  finally { btn.disabled = false; btn.textContent = '🗑 Clear & Retry'; }
+}
+function showRejected(msg) {
+  document.getElementById('clearBox').style.display = 'block';
+  showMsg('pairMsg', 'error', '⚠️ ' + msg);
+  updateStatus('off', 'Session rejected');
 }
 
 document.getElementById('phoneInput').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
