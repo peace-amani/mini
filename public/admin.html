@@ -941,10 +941,10 @@ function filterSessions() {
     const suggest = getSuggestion(s);
     const suggestHtml = suggest
       ? suggest.type === 'restart'
-        ? '<button class="suggest restart" onclick="restartBot('' + s.phone + '')">↺ Restart bot</button>'
-        : '<button class="suggest delete" onclick="deleteSession('' + s.phone + '')">Delete</button>'
-      : '<span style="color:var(--gray-500);font-size:0.7rem">—</span>';
-    return '<tr><td><code style="font-size:0.8rem">' + s.phone + '</code></td><td><span class="badge ' + cls + '"><span class="badge-dot"></span>' + cls.charAt(0).toUpperCase()+cls.slice(1) + '</span></td><td>' + suggestHtml + '</td><td>' + fmtDate(s.connectedAt) + '</td><td>' + fmtDate(s.lastSeen) + '</td><td><div class="action-col"><button class="restart-btn" onclick="restartBot('' + s.phone + '')">↺</button><button class="del-btn" onclick="deleteSession('' + s.phone + '')">Delete</button></div></td></tr>';
+        ? '<button class="suggest restart" onclick="restartBot(\'' + s.phone + '\')">\u21ba Restart bot</button>'
+        : '<button class="suggest delete" onclick="deleteSession(\'' + s.phone + '\')">Delete</button>'
+      : '<span style="color:var(--gray-500);font-size:0.7rem">\u2014</span>';
+    return '<tr><td><code>' + s.phone + '</code></td><td><span class="badge ' + cls + '"><span class="badge-dot"></span>' + cls.charAt(0).toUpperCase() + cls.slice(1) + '</span></td><td>' + suggestHtml + '</td><td>' + fmtDate(s.connectedAt) + '</td><td>' + fmtDate(s.lastSeen) + '</td><td><div class="action-col"><button class="restart-btn" onclick="restartBot(\'' + s.phone + '\')">\u21ba</button><button class="del-btn" onclick="deleteSession(\'' + s.phone + '\')">Delete</button></div></td></tr>';
   }).join('');
 }
 
