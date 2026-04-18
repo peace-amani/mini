@@ -271,11 +271,15 @@
 </footer>
 
 <script>
+let myPhone = null; // track which phone this tab is pairing
 const evtSource = new EventSource('/api/events');
 evtSource.onmessage = e => { try { handleEvent(JSON.parse(e.data)); } catch {} };
 evtSource.onerror = () => setStatus('off', 'Bot offline or unreachable');
 
 function handleEvent(data) {
+  // Only process phone-specific events if they match THIS tab's phone
+  const phoneEvents = ['pairing_code','connected_success','session_saved','reconnecting','session_rejected','connection_closed','bot_exited','error'];
+  if (data.phone && myPhone && data.phone !== myPhone && phoneEvents.includes(data.event)) return;
   switch (data.event) {
     case 'connected': updateStatus(data.botStatus); break;
     case 'pairing_started':
@@ -333,6 +337,7 @@ function showMsg(id, type, msg) {
 
 async function requestPairCode() {
   const phone = document.getElementById('phoneInput').value.replace(/\D/g, '');
+  myPhone = phone; // lock this tab to this phone's events
   if (!phone || phone.length < 7) { showMsg('pairMsg', 'error', 'Please enter a valid phone number with country code.'); return; }
   document.getElementById('pairBtn').disabled = true;
   document.getElementById('codeBox').style.display = 'none';
