@@ -253,3 +253,39 @@ app.listen(PORT, '0.0.0.0', () => {
   else console.log(`[WOLFY WebServer] Bot URL: ${BOT_URL}`);
   if (!ADMIN_PASS) console.warn('[WOLFY WebServer] WARNING: ADMIN_PASSWORD not set!');
 });
+
+// ====== UPDATE / RESTART PROXY ======
+
+// GET /api/admin/version — latest GitHub commit info
+app.get('/api/admin/version', requireBot, requireAdmin, async (req, res) => {
+  try {
+    const r = await fetch(`${BOT_URL}/admin/version`, { headers: { 'x-admin-key': ADMIN_KEY } });
+    res.json(await r.json());
+  } catch {
+    res.status(502).json({ success: false, error: 'Bot server unreachable' });
+  }
+});
+
+// POST /api/admin/restart-all — restart all running bot processes
+app.post('/api/admin/restart-all', requireBot, requireAdmin, async (req, res) => {
+  try {
+    const r = await fetch(`${BOT_URL}/admin/restart-all`, {
+      method: 'POST', headers: { 'x-admin-key': ADMIN_KEY }
+    });
+    res.json(await r.json());
+  } catch {
+    res.status(502).json({ success: false, error: 'Bot server unreachable' });
+  }
+});
+
+// POST /api/admin/update-all — check GitHub + restart all bot processes
+app.post('/api/admin/update-all', requireBot, requireAdmin, async (req, res) => {
+  try {
+    const r = await fetch(`${BOT_URL}/admin/update-all`, {
+      method: 'POST', headers: { 'x-admin-key': ADMIN_KEY }
+    });
+    res.json(await r.json());
+  } catch {
+    res.status(502).json({ success: false, error: 'Bot server unreachable' });
+  }
+});
